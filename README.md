@@ -7,20 +7,21 @@ the video's actual transcript, not the model's general knowledge.
 Built as a portfolio project to demonstrate real AI engineering practice
 (architecture, evaluation, verification) rather than just prompting.
 
-## Status: M2 in progress
+## Status: M2 complete
 
 The core RAG pipeline (M1) is restructured into a proper multi-file
 architecture and validated against two hand-built eval sets (30
-question/answer pairs total, across a scripted TED talk and a messy
-conversational interview) — **30/30 correct**, including proper rejection
-of all out-of-scope/trick questions.
+question/answer pairs total) — **30/30 correct**, including proper
+rejection of all out-of-scope/trick questions.
 
-A FastAPI backend (`api.py`) now wraps the pipeline as a REST API
-(`/index`, `/ask`, `/health`), tested and working. A React frontend is
-next, to replace direct API testing with a real UI.
+A full-stack UI (M2) now wraps the pipeline: a FastAPI backend (`api.py`)
+exposes it as a REST API, and a React frontend (`frontend/`) consumes it —
+tested against both happy-path and failure-path scenarios (empty input,
+server down, uncaptioned videos, asking before loading a video).
 
 See [`REQUIREMENTS.md`](./REQUIREMENTS.md) for full scope, success
-criteria, and the milestone roadmap (M1 → M4).
+criteria, the milestone roadmap (M1 → M4), and tracked open questions
+(including one observed edge case in name-attribution grounding).
 
 `AskTheVideo_v0_prototype.ipynb` is preserved as the original working
 single-notebook prototype this project was refactored from.
@@ -35,28 +36,33 @@ single-notebook prototype this project was refactored from.
    given question
 4. **Generation** (`chain.py`) — an LCEL chain combining retrieval, a
    grounding-focused prompt, and Gemini to produce an answer
+5. **API** (`api.py`) — exposes the pipeline as `/index`, `/ask`, `/health`
+6. **Frontend** (`frontend/`) — a React app for loading a video and asking
+   questions through a browser
 
-`main.py` ties these together into a runnable CLI: give it a video ID, ask
-questions, get transcript-grounded answers.
+`main.py` also provides a CLI entry point for direct testing without the
+frontend.
 
 ## Project structure
 
 ```
-config.py         # centralized settings (models, chunk size, rate limits)
-ingestion.py      # transcript fetching
-indexing.py       # chunking, embedding, FAISS build/save/load
-retrieval.py      # retriever configuration
-chain.py          # prompt + LLM + LCEL chain
-main.py           # CLI entry point
-api.py            # FastAPI backend — exposes the pipeline as /index, /ask, /health
-eval_set.py       # eval set #1 (Simon Sinek TED talk)
-eval_set_2.py     # eval set #2 (Elon Musk TED interview)
-run_eval.py       # runs an eval set automatically against a built index
-requirements.txt  # exact dependency versions
+config.py          # centralized settings (models, chunk size, rate limits)
+ingestion.py        # transcript fetching
+indexing.py           # chunking, embedding, FAISS build/save/load
+retrieval.py            # retriever configuration
+chain.py                  # prompt + LLM + LCEL chain
+main.py                     # CLI entry point
+api.py                        # FastAPI backend
+frontend/                       # React frontend (Vite)
+eval_set.py                        # eval set #1 (Simon Sinek TED talk)
+eval_set_2.py                         # eval set #2 (Elon Musk TED interview)
+run_eval.py                              # runs an eval set automatically
+requirements.txt                            # backend dependency versions
 ```
 
 ## Setup
 
+**Backend:**
 ```powershell
 python -m venv venv
 venv\Scripts\activate
@@ -69,28 +75,36 @@ Create a `.env` file with a free Gemini API key
 GOOGLE_API_KEY=your_key_here
 ```
 
+**Frontend:**
+```powershell
+cd frontend
+npm install
+```
+
 ## Usage
 
-**CLI (original interface):**
+**Run the full stack (two terminals):**
+```powershell
+# Terminal 1 — backend
+uvicorn api:app --reload
+
+# Terminal 2 — frontend
+cd frontend
+npm run dev
+```
+Then open `http://localhost:5173`.
+
+**CLI only:**
 ```powershell
 python main.py
 ```
-Enter a YouTube video ID (not the full URL) when prompted, then ask
-questions about it. Type `exit` to quit.
 
-**API (FastAPI backend, for the upcoming React frontend):**
+**API only** (interactive docs at `http://127.0.0.1:8000/docs`):
 ```powershell
 uvicorn api:app --reload
 ```
-Then visit `http://127.0.0.1:8000/docs` for an interactive test page, or
-call it directly:
-- `POST /index` with `{"video_id": "..."}` — indexes a video (or confirms
-  it's already indexed)
-- `POST /ask` with `{"video_id": "...", "question": "..."}` — answers a
-  question about an indexed video
-- `GET /health` — confirms the server is running
 
-To re-run the eval sets against a video you've already indexed:
+**Re-run the eval sets:**
 ```powershell
 python run_eval.py
 ```
@@ -101,11 +115,11 @@ python run_eval.py
 - LangChain (LCEL) — orchestration
 - Google Gemini: `gemini-2.5-flash` (chat) + `gemini-embedding-001` (embeddings)
 - FAISS — vector store
+- FastAPI — backend API
+- React (Vite) — frontend
 
 ## Roadmap
 
-- **M2** — full-stack UI: FastAPI backend (wraps the RAG pipeline as an API)
-  + React frontend (consumes it), replacing the CLI loop
 - **M3** — public deployment (backend + frontend hosted separately)
 - **M4** — error handling, edge cases, rate-limit UX polish
 
