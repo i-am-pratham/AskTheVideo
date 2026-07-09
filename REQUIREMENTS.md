@@ -62,3 +62,12 @@ roles. Secondary goal: a working public demo others can actually try.
   prioritize before M2?
 - What happens on Gemini free-tier rate limits during a live demo — need a
   UX-level answer, not just backend retry logic
+- Observed edge case (M2 testing, video iG9CE55wbtY): when a video never
+  states the speaker's name AND contains an unrelated same-named entity
+  in an anecdote (e.g. "James Robinson" as a character, distinct from
+  the actual speaker Ken Robinson), the bot correctly refuses to assume
+  identity — but produces a confusing hedge instead of a clean answer.
+  The underlying content stays correct/grounded, so this isn't a
+  correctness bug — but worth revisiting for answer clarity, possibly by
+  improving the prompt to better distinguish "named entities mentioned
+  in the transcript" from "the speaker."
