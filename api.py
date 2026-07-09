@@ -19,7 +19,7 @@ app = FastAPI(title="AskTheVideo API")
 # browsers block the request by default for security reasons.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # fine for local development; tighten before deploying publicly
+    allow_origins=["https://askthevideo-frontend.vercel.app"],  # fine for local development; tighten before deploying publicly
     allow_methods=["*"],
     allow_headers=["*"],
 )
