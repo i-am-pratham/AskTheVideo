@@ -10,6 +10,9 @@ Portfolio/resume piece first — built to demonstrate real AI engineering
 practice (not just prompting) for AI Backend Engineer / GenAI Developer
 roles. Secondary goal: a working public demo others can actually try.
 
+**Live app:** https://askthevideo-frontend.vercel.app
+**Live API docs:** https://askthevideo-api.onrender.com/docs
+
 ## Scope (v1)
 
 ### In scope
@@ -28,49 +31,77 @@ roles. Secondary goal: a working public demo others can actually try.
 - User accounts, auth, or saved history
 - Real-time/streaming video support
 
-## Success criteria (how we know v1 is "done")
-1. **Accuracy**: on a fixed eval set of 15 known Q&A pairs (from one test
-   video), the system answers correctly on at least 80%
-2. **Reliability**: ingesting a new video (up to ~4 hours) completes
-   without manual intervention, including handling rate limits gracefully
-3. **Deployment**: a person with no code access can open a URL, paste a
-   video link, and ask questions — no Colab, no local setup required
-4. **Honesty**: for out-of-scope questions (topic not in video), the system
-   declines rather than fabricating an answer, verified against a small
-   set of "trick" questions in the eval set
+## Success criteria — status: MET
 
-## Milestones toward v1
-- **M1 — Core pipeline correctness**: restructured multi-file code,
-  working reliably for one video, with the eval set passing threshold
-  (this is what we're about to build)
-- **M2 — Simple UI**: a minimal interface (Streamlit or similar) replacing
-  notebook cells — usable by someone who isn't you
-- **M3 — Deployment**: hosted somewhere with a public URL (e.g. Streamlit
-  Community Cloud, Render, HuggingFace Spaces — free tiers)
-- **M4 — Polish**: error handling for bad URLs, no-captions videos,
-  loading states, basic rate-limit messaging in the UI itself
-  
-  **M4 additions (tracked)**
+1. **Accuracy**: ✅ validated against two 15-question eval sets (30 pairs
+   total, across a scripted TED talk and a messy conversational
+   interview) — **30/30 correct**, well above the 80% target
+2. **Reliability**: ✅ ingestion completes without manual intervention,
+   including rate-limit batching/retry for the embedding step
+3. **Deployment**: ✅ live public URL, no code/Colab/local setup required
+   for a user to try it
+4. **Honesty**: ✅ all out-of-scope/trick questions across both eval sets
+   correctly declined rather than fabricated
 
-  - **Persistent vector storage**: FAISS indexes currently live on local disk,
-    which is wiped on every backend restart on free hosting tiers. Migrate to
-    a hosted vector store with a free tier (candidates: Pinecone, Supabase +
-    pgvector, Qdrant Cloud) so indexed videos survive backend restarts.
-    Requires updating `indexing.py` and `retrieval.py`, and re-running both
-    eval sets to confirm no regression after the migration.
+## Milestones — status
 
-## Tech stack (locked in from prototype, carried forward)
-- `youtube-transcript-api` — transcript extraction
+- **M1 — Core pipeline correctness**: ✅ done. Restructured into a
+  multi-file architecture (`ingestion.py`, `indexing.py`, `retrieval.py`,
+  `chain.py`, `config.py`), validated with the eval sets above.
+- **M2 — Full-stack UI**: ✅ done. Built a FastAPI backend (`api.py`)
+  exposing the pipeline as a REST API, and a React (Vite) frontend
+  consuming it — a deliberate choice over the original "Streamlit or
+  similar" plan, made to build genuine full-stack experience. Tested against happy-path and
+  failure-path scenarios (empty input, server down, uncaptioned videos,
+  asking before loading a video).
+- **M3 — Deployment**: ✅ done. Backend deployed on Render (free tier),
+  frontend deployed on Vercel (free tier), CORS locked to the production
+  frontend origin. Required a mid-deployment architecture change — see
+  "Deployment lessons" below.
+- **M4 — Polish**: in progress, see tracked items below.
+
+## M4 — tracked items
+
+- **Persistent vector storage**: FAISS indexes currently live on local
+  disk, which is wiped on every backend restart on Render's free tier.
+  Migrate to a hosted vector store with a free tier (candidates:
+  Pinecone, Supabase + pgvector, Qdrant Cloud) so indexed videos survive
+  backend restarts. Requires updating `indexing.py` and `retrieval.py`,
+  and re-running both eval sets to confirm no regression after migration.
+- Error handling polish for bad URLs, no-captions videos, loading states
+- Rate-limit UX messaging in the frontend itself (not just backend retry
+  logic)
+
+## Deployment lessons (real, encountered during M3)
+
+The original transcript-fetching approach (`youtube-transcript-api`,
+scraping YouTube directly) worked perfectly locally but failed
+immediately once deployed to Render — YouTube blocks requests from
+cloud/datacenter IP ranges, a class of bug that only surfaces once code
+actually runs on real infrastructure, not during local development. A
+free-tier Webshare proxy didn't fix it (still a datacenter IP, just a
+different one — triggered Google's CAPTCHA challenge instead of a clean
+block). The actual fix: switched to
+[Supadata](https://supadata.ai), a hosted transcript API — the backend
+no longer talks to YouTube directly at all, sidestepping the IP-blocking
+problem entirely. Also simplified the code (no proxy config, no
+library-specific exception juggling).
+
+## Tech stack (current, as deployed)
+
+- Supadata — hosted transcript extraction (replaced `youtube-transcript-api`
+  after the deployment issue above)
 - LangChain (LCEL) — orchestration
 - Google Gemini: `gemini-2.5-flash` (chat) + `gemini-embedding-001` (embeddings)
 - FAISS — vector store
-- Chunking: `chunk_size=1000-1500`, `chunk_overlap=200-300` (tune during eval)
+- Chunking: `chunk_size=1500`, `chunk_overlap=300`
+- FastAPI — backend API, deployed on Render
+- React (Vite) — frontend, deployed on Vercel
 
-## Open questions (revisit later, not blocking M1)
+## Open questions (revisit later)
+
 - Does storing timestamps per chunk improve answer usefulness enough to
-  prioritize before M2?
-- What happens on Gemini free-tier rate limits during a live demo — need a
-  UX-level answer, not just backend retry logic
+  prioritize before further polish?
 - Observed edge case (M2 testing, video iG9CE55wbtY): when a video never
   states the speaker's name AND contains an unrelated same-named entity
   in an anecdote (e.g. "James Robinson" as a character, distinct from
