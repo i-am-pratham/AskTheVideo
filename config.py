@@ -36,3 +36,6 @@ RETRIEVER_K = 4
 
 # Where FAISS indexes get saved locally (per-video subfolder created at runtime)
 INDEX_STORAGE_DIR = "faiss_indexes"
+
+#Used for getting the transcript of youtube in ingestion.py
+SUPADATA_API_KEY = os.environ.get("SUPADATA_API_KEY")

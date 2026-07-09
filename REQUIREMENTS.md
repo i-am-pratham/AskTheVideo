@@ -49,6 +49,15 @@ roles. Secondary goal: a working public demo others can actually try.
   Community Cloud, Render, HuggingFace Spaces — free tiers)
 - **M4 — Polish**: error handling for bad URLs, no-captions videos,
   loading states, basic rate-limit messaging in the UI itself
+  
+  **M4 additions (tracked)**
+
+  - **Persistent vector storage**: FAISS indexes currently live on local disk,
+    which is wiped on every backend restart on free hosting tiers. Migrate to
+    a hosted vector store with a free tier (candidates: Pinecone, Supabase +
+    pgvector, Qdrant Cloud) so indexed videos survive backend restarts.
+    Requires updating `indexing.py` and `retrieval.py`, and re-running both
+    eval sets to confirm no regression after the migration.
 
 ## Tech stack (locked in from prototype, carried forward)
 - `youtube-transcript-api` — transcript extraction

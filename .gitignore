@@ -5,3 +5,4 @@ __pycache__/
 faiss_indexes/
 frontend/node_modules/
 .vscode/
+frontend/.env
